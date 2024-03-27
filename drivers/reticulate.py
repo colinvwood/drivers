@@ -46,13 +46,16 @@ class RtifactAPIUsageVariable(usage.UsageVariable):
         expr = expression
 
         lines = [
-            'hits = sorted(%r._archiver.data_dir.glob(%r))' % (name, path),
-            'if len(hits) != 1:',
-            self.use.INDENT + 'raise ValueError',
-            'target = hits[0].read_text()',
-            'match = re.search(%r, target, flags=re.MULTILINE)' % (expr,),
-            'if match is None:',
-            self.use.INDENT + 'raise AssertionError',
+            'hits <- builtins$sorted(%r$_archiver$data_dir$glob(%r))' \
+                % (name, path),
+            'if ( builtins$len(hits) != 1 ) {',
+            self.use.INDENT + 'stop("No such path in artifact.")',
+            '}',
+            'target <- hits[0]$read_text()',
+            'match <- re$search(%r, target, flags=re.MULTILINE)' % (expr,),
+            'if ( is.null(match) ) {',
+            self.use.INDENT + 'stop("No such matching line.")',
+            '}',
         ]
 
         self.use._add(lines)
@@ -67,8 +70,9 @@ class RtifactAPIUsageVariable(usage.UsageVariable):
             name = "%s[%s]" % (name, key)
 
         lines = [
-            'if str(%r.type) != %r:' % (name, str(semantic_type)),
-            self.use.INDENT + 'raise AssertionError',
+            'if ( bulitins$str(%r$type) != %r ) {' % (name, str(semantic_type)),
+            self.use.INDENT + 'stop("Output is not of the expected type.")',
+            '}',
         ]
 
         self.use._add(lines)
@@ -337,6 +341,8 @@ class RtifactAPIUsage(usage.Usage):
         self._update_imports(import_='%s.actions' % (base,), as_=as_)
         return as_
 
+    # TODO: figure out how to deal with builtins import -- hardcoded or
+    # detect it?
     def _template_action(self, action, input_opts, variables):
         output_vars = 'action_results'
 
