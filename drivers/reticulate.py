@@ -1,10 +1,15 @@
 from dataclasses import dataclass
+import os
 import re
+import urllib.parse
+
+from docutils import nodes
 
 from qiime2.sdk import usage
 from qiime2.plugins import (
     ArtifactAPIUsage, ArtifactAPIUsageVariable, _canonical_module
 )
+from q2cli.core.usage import CLIUsageVariable
 
 
 class RtifactAPIUsageVariable(usage.UsageVariable):
@@ -341,8 +346,7 @@ class RtifactAPIUsage(usage.Usage):
         self._update_imports(import_='%s.actions' % (base,), as_=as_)
         return as_
 
-    # TODO: figure out how to deal with builtins import -- hardcoded or
-    # detect it?
+    # TODO: need to hardcode "builtins" import
     def _template_action(self, action, input_opts, variables):
         output_vars = 'action_results'
 
@@ -374,6 +378,14 @@ class RtifactAPIUsage(usage.Usage):
             t = 'c(' + t + ')'
             return self.INDENT + '%s=builtins$set(%s),' % (input_name, t)
 
+        if isinstance(value, bool):
+            if value:
+                t = 'TRUE'
+            else:
+                t = 'FALSE'
+
+            return self.INDENT + '%s=%s,' % (input_name, t)
+
         return self.INDENT + '%s=%r,' % (input_name, value)
 
     def _update_imports(self, import_, from_=None, as_=None):
@@ -389,3 +401,109 @@ class RtifactAPIUsage(usage.Usage):
         if rendered not in self.global_imports:
             self.local_imports.add(rendered)
             self.global_imports.add(rendered)
+
+
+def _build_url(env, fn):
+    baseurl = os.environ.get('Q2DOC_HTML_BASEURL', env.config.html_baseurl)
+    if baseurl == '':
+        raise ValueError('must set `html_baseurl` sphinx config val')
+    parts = list(urllib.parse.urlparse(baseurl))
+    parts[2] += 'data/%s/%s' % (env.docname, fn)
+    url = urllib.parse.urlunparse(parts)
+    return url
+
+
+class SphinxRtifactUsage(RtifactAPIUsage):
+    def __init__(self, sphinx_env):
+        super.__init__()
+        self.sphinx_env = sphinx_env
+
+    def _to_cli_var(self, var):
+            # Build a tmp cli-based variable, for filename templating!
+            return CLIUsageVariable(
+                var.name, lambda: None, var.var_type, var.use
+            )
+
+    def _download_file(self, var):
+        cli_var = self._to_cli_var(var)
+        fn = cli_var.to_interface_name()
+        url = _build_url(self.sphinx_env, fn)
+
+        self._update_imports(from_='urllib', import_='request')
+
+        lines = [
+            'url <- %r' % (url,),
+            'fn <- %r' % (fn,),
+            'request$urlretrieve(url, fn)',
+        ]
+
+        self._add(lines)
+
+        return cli_var
+
+    def init_artifact(self, name, factory):
+        var = super().init_artifact(name, factory)
+
+        self._download_file(var)
+        self._update_imports(from_='qiime2', import_='Artifact')
+        input_fp = var.to_interface_name()
+
+        lines = [
+            '%s <- Artifact$load(fn)' % (input_fp,),
+            '',
+        ]
+
+        self._add(lines)
+
+        return var
+
+    def init_metadata(self, name, factory):
+        var = super().init_metadata(name, factory)
+
+        self._download_file(var)
+        self._update_imports(from_='qiime2', import_='Metadata')
+        input_fp = var.to_interface_name()
+
+        lines = [
+            '%s <- Metadata.load(fn)' % (input_fp,),
+            '',
+        ]
+
+        self._add(lines)
+
+        return var
+
+    def init_format(self, name, factory, ext=None):
+        var = super().init_format(name, factory, ext=ext)
+
+        # no ext means a dirfmt, which means we have zipped the computed res.
+        if ext is None:
+            ext = 'zip'
+
+        fn = '%s.%s' % (name, ext)
+        tmp_var = self.usage_variable(fn, lambda: None, var.var_type)
+        self._download_file(tmp_var)
+
+        if ext == 'zip':
+            self._update_imports(import_='zipfile')
+            input_fp = var.to_interface_name()
+
+            lines = [
+                'zf = zipfile$ZipFile(fn)',
+                'zf.extraclall(%r)' % (input_fp,),
+                'zf$close()'
+            ]
+
+            self._add(lines)
+
+        return var
+
+    def render(self, node_id, flush=False, **kwargs):
+        rendered = super().render(flush)
+
+        if rendered == '':
+            return None
+
+        # TODO
+        return nodes.literal_block(rendered, rendered, ids=[node_id],
+                                    classes=['python3-usage'])
