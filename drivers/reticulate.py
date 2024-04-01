@@ -270,7 +270,7 @@ class RtifactAPIUsage(usage.Usage):
         remaining = ', '.join(names)
         var_name = variable.to_interface_name()
 
-        lines = ['%r = %r$merge(%s)' % (var_name, first_md, remaining)]
+        lines = ['%r <- %r$merge(%s)' % (var_name, first_md, remaining)]
 
         self._add(lines)
 
@@ -282,7 +282,7 @@ class RtifactAPIUsage(usage.Usage):
         to_name = col_variable.to_interface_name()
         from_name = variable.to_interface_name()
 
-        lines = ['%s = %s$get_column(%r)' % (to_name, from_name, column_name)]
+        lines = ['%s <- %s$get_column(%r)' % (to_name, from_name, column_name)]
 
         self._add(lines)
 
@@ -385,6 +385,12 @@ class RtifactAPIUsage(usage.Usage):
                 t = 'FALSE'
 
             return self.INDENT + '%s=%s,' % (input_name, t)
+
+        if isinstance(value, int):
+            return self.INDENT + '%s=%rL,' % (input_name, value)
+
+        if value is None:
+            return self.INDENT + '%s=NULL,' % (input_name,)
 
         return self.INDENT + '%s=%r,' % (input_name, value)
 
