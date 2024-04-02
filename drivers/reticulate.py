@@ -189,6 +189,8 @@ class RtifactAPIUsage(usage.Usage):
         lines = [f'{var_name} = ResultCollection(dict(']
         for key, member in members.items():
             lines.append(self.INDENT + f"'{key}' = {member.name},")
+
+        lines[-1] = lines[-1].rstrip(',')
         lines.append('))')
 
         self._update_imports(from_='qiime2', import_='ResultCollection')
@@ -203,7 +205,7 @@ class RtifactAPIUsage(usage.Usage):
         )
 
         lines = [
-            f"{name} = {variable.to_interface_name()}['{key}']"
+            f"{name} <- {variable.to_interface_name()}['{key}']"
         ]
         self._add(lines)
 
