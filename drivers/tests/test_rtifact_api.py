@@ -10,7 +10,6 @@ from drivers.reticulate import RtifactAPIUsage
 class TestRtifactAPIUsage(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.maxDiff = None
         cls.test_dir = tempfile.TemporaryDirectory(prefix='qiime2-test-temp-')
         cls.plugin = get_dummy_plugin()
 
@@ -232,3 +231,21 @@ class TestRtifactAPIUsage(unittest.TestCase):
         exp = textwrap.dedent(exp)
 
         self.assertEqual(exp, use.render())
+
+    def test_template_collection(self):
+        use = RtifactAPIUsage()
+
+        set_input = {1, 3.0, None, 'a'}
+        exp = use.INDENT + "input=builtins$set(c(1L, 3.0, NULL, 'a')),"
+        obs = use._template_input('input', set_input)
+        self.assertEqual(exp, obs)
+
+        list_input = [1, 3.0]
+        exp = use.INDENT + "input=c(1L, 3.0),"
+        obs = use._template_input('input', list_input)
+        self.assertEqual(exp, obs)
+
+        list_input_bool = [False, True]
+        exp = use.INDENT + "input=c(FALSE, TRUE),"
+        obs = use._template_input('input', list_input_bool)
+        self.assertEqual(exp, obs)

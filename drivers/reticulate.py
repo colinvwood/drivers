@@ -51,9 +51,8 @@ class RtifactAPIUsageVariable(usage.UsageVariable):
         expr = expression
 
         lines = [
-            'hits <- builtins$sorted(%r$_archiver$data_dir$glob(%r))' \
-                % (name, path),
-            'if ( builtins$len(hits) != 1 ) {',
+            'hits <- sort(%r$_archiver$data_dir$glob(%r))' % (name, path),
+            'if ( length(hits) != 1 ) {',
             self.use.INDENT + 'stop("No such path in artifact.")',
             '}',
             'target <- hits[0]$read_text()',
@@ -198,7 +197,6 @@ class RtifactAPIUsage(usage.Usage):
 
         return variable
 
-    #TODO: will this syntax work?
     def get_artifact_collection_member(self, name, variable, key):
         accessed_variable = super().get_artifact_collection_member(
             name, variable, key
@@ -348,7 +346,6 @@ class RtifactAPIUsage(usage.Usage):
         self._update_imports(import_='%s.actions' % (base,), as_=as_)
         return as_
 
-    # TODO: need to hardcode "builtins" import
     def _template_action(self, action, input_opts, variables):
         output_vars = 'action_results'
 
@@ -370,15 +367,15 @@ class RtifactAPIUsage(usage.Usage):
 
         self._add(lines)
 
+    # TODO: need to hardcode "builtins" import
     def _template_input(self, input_name, value, set_var=None):
         if isinstance(value, list):
-            t = ', '.join(repr(el) for el in value)
+            t = self._template_collection(sorted(value))
             return self.INDENT + '%s=c(%s),' % (input_name, t)
 
         if isinstance(value, set):
-            t = ', '.join(repr(el) for el in sorted(value, key=str))
-            t = 'c(' + t + ')'
-            return self.INDENT + '%s=builtins$set(%s),' % (input_name, t)
+            t = self._template_collection(sorted(value, key=str))
+            return self.INDENT + '%s=builtins$set(c(%s)),' % (input_name, t)
 
         if isinstance(value, bool):
             if value:
@@ -395,6 +392,23 @@ class RtifactAPIUsage(usage.Usage):
             return self.INDENT + '%s=NULL,' % (input_name,)
 
         return self.INDENT + '%s=%r,' % (input_name, value)
+
+    # TODO: nested collections possible?
+    def _template_collection(self, collection):
+        template = ''
+        for element in collection:
+            if element is True:
+                template += 'TRUE, '
+            elif element is False:
+                template += 'FALSE, '
+            elif type(element) is int:
+                template += f'{element}L, '
+            elif element is None:
+                template += 'NULL, '
+            else:
+                template += f'{repr(element)}, '
+
+        return template.rstrip(', ')
 
     def _update_imports(self, import_, from_=None, as_=None):
         import_record = self.ImporterRecord(
