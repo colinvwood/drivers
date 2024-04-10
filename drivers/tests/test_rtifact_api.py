@@ -23,6 +23,8 @@ class TestRtifactAPIUsage(unittest.TestCase):
         action.examples['concatenate_ints_simple'](use)
 
         exp = """\
+        library(reticulate)
+
         dummy_plugin_actions <- import("qiime2.plugins.dummy_plugin.actions")
 
         # This example demonstrates basic usage.
@@ -44,6 +46,8 @@ class TestRtifactAPIUsage(unittest.TestCase):
         action.examples['concatenate_ints_complex'](use)
 
         exp = """\
+        library(reticulate)
+
         dummy_plugin_actions <- import("qiime2.plugins.dummy_plugin.actions")
 
         # This example demonstrates chained usage (pt 1).
@@ -74,6 +78,8 @@ class TestRtifactAPIUsage(unittest.TestCase):
         action.examples['typical_pipeline_simple'](use)
 
         exp = """\
+        library(reticulate)
+
         dummy_plugin_actions <- import("qiime2.plugins.dummy_plugin.actions")
 
         action_results <- dummy_plugin_actions$typical_pipeline(
@@ -96,6 +102,8 @@ class TestRtifactAPIUsage(unittest.TestCase):
         action.examples['typical_pipeline_complex'](use)
 
         exp = """\
+        library(reticulate)
+
         dummy_plugin_actions <- import("qiime2.plugins.dummy_plugin.actions")
 
         action_results <- dummy_plugin_actions$typical_pipeline(
@@ -128,6 +136,8 @@ class TestRtifactAPIUsage(unittest.TestCase):
         action.examples['identity_with_metadata_merging'](use)
 
         exp = """\
+        library(reticulate)
+
         dummy_plugin_actions <- import("qiime2.plugins.dummy_plugin.actions")
 
         md3_md <- md1_md$merge(md2_md)
@@ -146,6 +156,8 @@ class TestRtifactAPIUsage(unittest.TestCase):
         action.examples['identity_with_metadata_column_get_mdc'](use)
 
         exp = """\
+        library(reticulate)
+
         dummy_plugin_actions <- import("qiime2.plugins.dummy_plugin.actions")
 
         mdc_mdc <- md_md$get_column('a')
@@ -164,6 +176,8 @@ class TestRtifactAPIUsage(unittest.TestCase):
         action.examples['optional_inputs'](use)
 
         exp = """\
+        library(reticulate)
+
         dummy_plugin_actions <- import("qiime2.plugins.dummy_plugin.actions")
 
         action_results <- dummy_plugin_actions$optional_artifacts_method(
@@ -200,6 +214,8 @@ class TestRtifactAPIUsage(unittest.TestCase):
         action.examples['collection_dict_of_ints'](use)
 
         exp = """\
+        library(reticulate)
+
         dummy_plugin_actions <- import("qiime2.plugins.dummy_plugin.actions")
 
         action_results <- dummy_plugin_actions$dict_of_ints(
@@ -216,6 +232,8 @@ class TestRtifactAPIUsage(unittest.TestCase):
         action.examples['construct_and_access_collection'](use)
 
         exp = """\
+        library(reticulate)
+
         ResultCollection <- import("qiime2")$ResultCollection
         dummy_plugin_actions <- import("qiime2.plugins.dummy_plugin.actions")
 
@@ -249,3 +267,24 @@ class TestRtifactAPIUsage(unittest.TestCase):
         exp = use.INDENT + "input=c(FALSE, TRUE),"
         obs = use._template_input('input', list_input_bool)
         self.assertEqual(exp, obs)
+
+    def test_builtins_import(self):
+        action = self.plugin.actions['variadic_input_method']
+        use = RtifactAPIUsage()
+        action.examples['variadic_input_simple'](use)
+
+        exp = """\
+        library(reticulate)
+        builtins <- import_builtins()
+
+        dummy_plugin_actions <- import("qiime2.plugins.dummy_plugin.actions")
+
+        action_results <- dummy_plugin_actions$variadic_input_method(
+            ints=c(ints_a, ints_b),
+            int_set=builtins$set(c(single_int1, single_int2)),
+            nums=builtins$set(c(7L, 8L, 9L)),
+        )
+        out <- action_results$output"""
+        exp = textwrap.dedent(exp)
+
+        self.assertEqual(exp, use.render())

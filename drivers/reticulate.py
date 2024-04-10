@@ -126,11 +126,19 @@ class RtifactAPIUsage(usage.Usage):
         self.local_imports = set()
         self.recorder = []
         self.init_data_refs = dict()
+        self.builtins_used = False
         if reset_global_imports:
             self.global_imports = set()
 
     def _add(self, lines):
         self.recorder.extend(lines)
+
+    def _reticulate_setup(self):
+        lines = ['library(reticulate)']
+        if self.builtins_used:
+            lines.append('builtins <- import_builtins()')
+
+        return lines + ['']
 
     def usage_variable(self, name, factory, var_type):
         return RtifactAPIUsageVariable(name, factory, var_type, self)
@@ -151,7 +159,11 @@ class RtifactAPIUsage(usage.Usage):
         sorted_imps = sorted(self.local_imports)
         if sorted_imps:
             sorted_imps = sorted_imps + ['']
-        rendered = '\n'.join(sorted_imps + self.recorder)
+
+        reticulate_setup = self._reticulate_setup()
+
+        rendered = '\n'.join(reticulate_setup + sorted_imps + self.recorder)
+
         if flush:
             self._reset_state()
         return rendered
@@ -367,13 +379,13 @@ class RtifactAPIUsage(usage.Usage):
 
         self._add(lines)
 
-    # TODO: need to hardcode "builtins" import
     def _template_input(self, input_name, value, set_var=None):
         if isinstance(value, list):
-            t = self._template_collection(sorted(value))
+            t = self._template_collection(value)
             return self.INDENT + '%s=c(%s),' % (input_name, t)
 
         if isinstance(value, set):
+            self.builtins_used = True
             t = self._template_collection(sorted(value, key=str))
             return self.INDENT + '%s=builtins$set(c(%s)),' % (input_name, t)
 
@@ -393,7 +405,6 @@ class RtifactAPIUsage(usage.Usage):
 
         return self.INDENT + '%s=%r,' % (input_name, value)
 
-    # TODO: nested collections possible?
     def _template_collection(self, collection):
         template = ''
         for element in collection:
