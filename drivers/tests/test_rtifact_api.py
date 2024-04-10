@@ -254,17 +254,17 @@ class TestRtifactAPIUsage(unittest.TestCase):
         use = RtifactAPIUsage()
 
         set_input = {1, 3.0, None, 'a'}
-        exp = use.INDENT + "input=builtins$set(c(1L, 3.0, NULL, 'a')),"
+        exp = use.INDENT + "input=builtins$set(list(1L, 3.0, NULL, 'a')),"
         obs = use._template_input('input', set_input)
         self.assertEqual(exp, obs)
 
         list_input = [1, 3.0]
-        exp = use.INDENT + "input=c(1L, 3.0),"
+        exp = use.INDENT + "input=list(1L, 3.0),"
         obs = use._template_input('input', list_input)
         self.assertEqual(exp, obs)
 
         list_input_bool = [False, True]
-        exp = use.INDENT + "input=c(FALSE, TRUE),"
+        exp = use.INDENT + "input=list(FALSE, TRUE),"
         obs = use._template_input('input', list_input_bool)
         self.assertEqual(exp, obs)
 
@@ -280,9 +280,9 @@ class TestRtifactAPIUsage(unittest.TestCase):
         dummy_plugin_actions <- import("qiime2.plugins.dummy_plugin.actions")
 
         action_results <- dummy_plugin_actions$variadic_input_method(
-            ints=c(ints_a, ints_b),
-            int_set=builtins$set(c(single_int1, single_int2)),
-            nums=builtins$set(c(7L, 8L, 9L)),
+            ints=list(ints_a, ints_b),
+            int_set=builtins$set(list(single_int1, single_int2)),
+            nums=builtins$set(list(7L, 8L, 9L)),
         )
         out <- action_results$output"""
         exp = textwrap.dedent(exp)

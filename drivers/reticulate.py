@@ -382,12 +382,12 @@ class RtifactAPIUsage(usage.Usage):
     def _template_input(self, input_name, value, set_var=None):
         if isinstance(value, list):
             t = self._template_collection(value)
-            return self.INDENT + '%s=c(%s),' % (input_name, t)
+            return self.INDENT + '%s=list(%s),' % (input_name, t)
 
         if isinstance(value, set):
             self.builtins_used = True
             t = self._template_collection(sorted(value, key=str))
-            return self.INDENT + '%s=builtins$set(c(%s)),' % (input_name, t)
+            return self.INDENT + '%s=builtins$set(list(%s)),' % (input_name, t)
 
         if isinstance(value, bool):
             if value:
