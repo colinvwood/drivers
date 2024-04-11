@@ -448,7 +448,7 @@ def _build_url(env, fn):
 
 class SphinxRtifactUsage(RtifactAPIUsage):
     def __init__(self, sphinx_env):
-        super.__init__()
+        super().__init__()
         self.sphinx_env = sphinx_env
 
     def _to_cli_var(self, var):
@@ -498,7 +498,7 @@ class SphinxRtifactUsage(RtifactAPIUsage):
         input_fp = var.to_interface_name()
 
         lines = [
-            '%s <- Metadata.load(fn)' % (input_fp,),
+            '%s <- Metadata$load(fn)' % (input_fp,),
             '',
         ]
 
@@ -523,7 +523,7 @@ class SphinxRtifactUsage(RtifactAPIUsage):
 
             lines = [
                 'zf = zipfile$ZipFile(fn)',
-                'zf.extraclall(%r)' % (input_fp,),
+                'zf$extractall(%r)' % (input_fp,),
                 'zf$close()'
             ]
 
